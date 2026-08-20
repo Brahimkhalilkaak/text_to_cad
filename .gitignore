@@ -1,2 +1,10 @@
-# Generated STL files
+# Python generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Generated CAD outputs
+out/
 *.stl
