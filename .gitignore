@@ -6,5 +6,4 @@ venv/
 .env
 
 # Generated CAD outputs
-out/
 *.stl
