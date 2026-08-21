@@ -18,13 +18,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
 import config
+from paths import CODER_PROMPT_FILE, CODE_FILE, OUT_DIR, SPEC_FILE, STL_FILE
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-PROMPT_FILE = PROMPTS_DIR / "cad_coder.md"
-OUT_DIR = Path(__file__).parent / "out"
-INTERMEDIATE_DIR = OUT_DIR / "intermediate"
-OUT_FILE = INTERMEDIATE_DIR / "generated_part.py"
-STL_FILE = OUT_DIR / "generated_part.stl"
 EXEC_TIMEOUT_S = 120
 
 _CODE_BLOCK_RE = re.compile(r"```(?:python|py)?\s*(.*?)```", re.DOTALL)
@@ -52,9 +47,9 @@ def _build_llm() -> ChatOpenAI:
 
 
 def _load_prompt() -> str:
-    if not PROMPT_FILE.exists():
-        raise FileNotFoundError(f"Prompt file not found: {PROMPT_FILE}")
-    return PROMPT_FILE.read_text(encoding="utf-8")
+    if not CODER_PROMPT_FILE.exists():
+        raise FileNotFoundError(f"Prompt file not found: {CODER_PROMPT_FILE}")
+    return CODER_PROMPT_FILE.read_text(encoding="utf-8")
 
 
 def _extract_code(text: str) -> str:
@@ -65,7 +60,7 @@ def _extract_code(text: str) -> str:
 
 
 def read_spec(state: CoderState) -> CoderState:
-    spec_path = Path(state.get("spec_path") or (INTERMEDIATE_DIR / "spec.json"))
+    spec_path = Path(state.get("spec_path") or SPEC_FILE)
     if not spec_path.exists():
         return {"error": f"Spec file not found: {spec_path}"}
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
@@ -86,12 +81,12 @@ def generate_code(state: CoderState) -> CoderState:
 
 
 def execute_code(state: CoderState) -> CoderState:
-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CODE_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    OUT_FILE.write_text(state["code"], encoding="utf-8")
+    CODE_FILE.write_text(state["code"], encoding="utf-8")
     try:
         proc = subprocess.run(
-            [sys.executable, str(OUT_FILE)],
+            [sys.executable, str(CODE_FILE)],
             cwd=OUT_DIR,
             capture_output=True,
             text=True,
@@ -142,16 +137,15 @@ def build_graph():
 
 
 def generate(spec: Dict[str, Any]) -> Path:
-    spec_path = INTERMEDIATE_DIR / "spec.json"
-    spec_path.parent.mkdir(parents=True, exist_ok=True)
-    spec_path.write_text(
+    SPEC_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SPEC_FILE.write_text(
         json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     graph = build_graph()
     result = graph.invoke({})
     if result.get("error"):
         raise RuntimeError(result["error"])
-    return OUT_FILE
+    return CODE_FILE
 
 
 def main() -> int:
@@ -173,7 +167,7 @@ def main() -> int:
         print(f"[cad_coder error] {exc}", file=sys.stderr)
         return 1
 
-    print(f"[written] {OUT_FILE}")
+    print(f"[written] {CODE_FILE}")
     print(f"[written] {STL_FILE}" if STL_FILE.exists() else "[missing] STL not produced")
     return 0
 

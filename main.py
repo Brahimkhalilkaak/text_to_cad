@@ -8,12 +8,10 @@ Usage:
 
 import json
 import sys
-from pathlib import Path
 
+from cad_coder import generate
 from cad_planner import plan
-from cad_coder import OUT_DIR, generate
-
-OUT_PATH = Path(__file__).parent / "out" / "intermediate" / "spec.json"
+from paths import SPEC_FILE, STL_FILE
 
 
 def main() -> int:
@@ -29,11 +27,11 @@ def main() -> int:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
 
-    OUT_PATH.write_text(
+    SPEC_FILE.write_text(
         json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     print(json.dumps(spec, indent=2, ensure_ascii=False))
-    print(f"\n[written] {OUT_PATH}")
+    print(f"\n[written] {SPEC_FILE}")
 
     try:
         code_path = generate(spec)
@@ -41,8 +39,7 @@ def main() -> int:
         print(f"[cad_coder error] {exc}", file=sys.stderr)
         return 1
     print(f"[written] {code_path}")
-    stl_path = OUT_DIR / "generated_part.stl"
-    print(f"[written] {stl_path}" if stl_path.exists() else "[missing] STL not produced")
+    print(f"[written] {STL_FILE}" if STL_FILE.exists() else "[missing] STL not produced")
 
     return 0
 
